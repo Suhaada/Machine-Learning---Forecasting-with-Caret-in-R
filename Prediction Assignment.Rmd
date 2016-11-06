@@ -1,0 +1,98 @@
+---
+title: "Prediction Assignment"
+author: "Adam Suhajda"
+date: '2016 november 5 '
+output: html_document
+---
+
+## Goal of the project 
+
+#### The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+##Data Exploration
+
+####Let's load the caret package and split the data into training and test sets
+
+```{r}
+
+setwd("C:/Users/Adam/Desktop/R/machine learning")
+library(caret)
+training<-read.csv("pml-training.csv",na.strings=c("NA","#DIV/0!"))
+testing<-read.csv("pml-testing.csv",na.strings=c("NA","#DIV/0!"))
+dim(training)
+
+```
+
+#### There seems to be variables with a large number of NA values, let's get rid of those and narrow the scope to less variables
+
+#### Please note my aim was to use about 50 variables, but my computer's availble memory didn't allow me to use that many.
+
+
+```{r}
+
+training<-training[, apply(training, 2, function(x) !any(is.na(x)))] 
+training=training[,-c(1:10)]
+
+testing=testing[, apply(testing, 2, function(x) !any(is.na(x)))] 
+testing=testing[,-c(1:10)]
+
+dim(training)
+
+```
+
+
+## Subsetting data to Train and Test sets
+
+#### Before fitting a model,I will split the existing data into a training and a test set. That will enable the model to be validated
+
+```{r}
+
+set.seed(123)
+inTrain <- createDataPartition(y=training$classe, p=0.70, list=FALSE)
+train1  <- training[inTrain,]
+validate  <- training[-inTrain,]
+
+```
+
+## Fitting a Model
+
+####To fit the model I'll use tha caret package with a random forest algorithm, using 36 variables as this seems to be the maximum my home computer could handle. 
+
+```{r}
+
+fit.model <- train(classe~.,
+                  data=train1,
+                  method="rf",
+                  trControl=trainControl(method="cv",number=2),
+                  prox=TRUE,
+                  verbose=TRUE,
+                  allowParallel=TRUE)
+
+
+fit.model 
+```
+
+## Valuating Results
+
+####I've used the confusion matrix to determine the accuracy of the fitted model
+
+```{r}
+predicted <- predict(fit.model, newdata=validate)
+confusion_matrix <- confusionMatrix(predicted, validate$classe)
+confusion_matrix
+```
+
+## Coursera task
+
+#### The task of the assignemnt was determined as:  "You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases".
+
+#### Predicting the next 20 cases: 
+
+```{r}
+predictions <- predict(fit.model, newdata=testing)
+testing$class <- predictions
+test <- data.frame(problem_id = testing$problem_id, class = predictions)
+test
+```
+
+
